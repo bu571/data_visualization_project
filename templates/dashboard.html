@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Visualization Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        #loading {
+            display: none;
+        }
+        #error {
+            display: none;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Data Visualization Dashboard</h1>
+    <div class="form-group">
+        <label for="end_year">End Year:</label>
+        <input type="text" id="end_year" class="form-control" placeholder="Enter end year">
+    </div>
+    <div class="form-group">
+        <label for="topics">Topics:</label>
+        <input type="text" id="topics" class="form-control" placeholder="Enter topics">
+    </div>
+    <div class="form-group">
+        <label for="sector">Sector:</label>
+        <input type="text" id="sector" class="form-control" placeholder="Enter sector">
+    </div>
+    <div class="form-group">
+        <label for="region">Region:</label>
+        <input type="text" id="region" class="form-control" placeholder="Enter region">
+    </div>
+    <div class="form-group">
+        <label for="pest">PEST:</label>
+        <input type="text" id="pest" class="form-control" placeholder="Enter PEST">
+    </div>
+    <div class="form-group">
+        <label for="source">Source:</label>
+        <input type="text" id="source" class="form-control" placeholder="Enter source">
+    </div>
+    <div class="form-group">
+        <label for="swot">SWOT:</label>
+        <input type="text" id="swot" class="form-control" placeholder="Enter SWOT">
+    </div>
+    <div class="form-group">
+        <label for="country">Country:</label>
+        <input type="text" id="country" class="form-control" placeholder="Enter country">
+    </div>
+    <div class="form-group">
+        <label for="city">City:</label>
+        <input type="text" id="city" class="form-control" placeholder="Enter city">
+    </div>
+    <button id="filter-button" class="btn btn-primary">Filter</button>
+    <button id="clear-button" class="btn btn-secondary">Clear Filters</button>
+    <div id="loading">Loading...</div>
+    <div id="error">Error fetching data</div>
+    <div id="data-table" style="margin-top: 20px;"></div>
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        document.getElementById('filter-button').addEventListener('click', function() {
+            const endYear = document.getElementById('end_year').value;
+            const topics = document.getElementById('topics').value;
+            const sector = document.getElementById('sector').value;
+            const region = document.getElementById('region').value;
+            const pest = document.getElementById('pest').value;
+            const source = document.getElementById('source').value;
+            const swot = document.getElementById('swot').value;
+            const country = document.getElementById('country').value;
+            const city = document.getElementById('city').value;
+
+            let url = 'http://127.0.0.1:5001/data?';
+            if (endYear) url += `end_year=${endYear}&`;
+            if (topics) url += `topics=${topics}&`;
+            if (sector) url += `sector=${sector}&`;
+            if (region) url += `region=${region}&`;
+            if (pest) url += `pest=${pest}&`;
+            if (source) url += `source=${source}&`;
+            if (swot) url += `swot=${swot}&`;
+            if (country) url += `country=${country}&`;
+            if (city) url += `city=${city}&`;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+
+                    const table = document.createElement('table');
+                    table.className = "table table-striped";
+
+                    const header = table.createTHead();
+                    const headerRow = header.insertRow();
+                    const columns = Object.keys(data[0]);
+                    columns.forEach(col => {
+                        const cell = headerRow.insertCell();
+                        cell.textContent = col;
+                    });
+
+                    const body = table.createTBody();
+                    data.forEach(row => {
+                        const rowElement = body.insertRow();
+                        columns.forEach(col => {
+                            const cell = rowElement.insertCell();
+                            cell.textContent = row[col];
+                        });
+                    });
+
+                    document.getElementById('data-table').innerHTML = "";
+                    document.getElementById('data-table').appendChild(table);
+
+                    // D3.js visualization
+                    const svg = d3.select('#data-table')
+                        .append('svg')
+                        .attr('width', 800)
+                        .attr('height', 400);
+
+                    const x = d3.scaleBand()
+                        .domain(data.map(d => d.country))
+                        .range([0, 800])
+                        .padding(0.1);
+
+                    const y = d3.scaleLinear()
+                        .domain([0, d3.max(data, d => d.intensity)])
+                        .nice()
+                        .range([400, 0]);
+
+                    svg.append('g')
+                        .selectAll('rect')
+                        .data(data)
+                        .enter().append('rect')
+                        .attr('x', d => x(d.country))
+                        .attr('y', d => y(d.intensity))
+                        .attr('width', x.bandwidth())
+                        .attr('height', d => 400 - y(d.intensity))
+                        .attr('fill', 'steelblue');
+
+                    svg.append('g')
+                        .attr('class', 'x-axis')
+                        .attr('transform', 'translate(0,400)')
+                        .call(d3.axisBottom(x));
+
+                    svg.append('g')
+                        .attr('class', 'y-axis')
+                        .call(d3.axisLeft(y));
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('error').style.display = 'block';
+                    console.error('Error fetching data:', error);
+                });
+        });
+
+        document.getElementById('clear-button').addEventListener('click', function() {
+            document.getElementById('end_year').value = '';
+            document.getElementById('topics').value = '';
+            document.getElementById('sector').value = '';
+            document.getElementById('region').value = '';
+            document.getElementById('pest').value = '';
+            document.getElementById('source').value = '';
+            document.getElementById('swot').value = '';
+            document.getElementById('country').value = '';
+            document.getElementById('city').value = '';
+            document.getElementById('data-table').innerHTML = '';
+        });
+    </script>
+</body>
+</html>
+
+
