@@ -1,0 +1,3 @@
+[submodule "datavis-dashboard"]
+  path = datavis-dashboard
+  url = https://github.com/yourusername/datavis-dashboard.git
